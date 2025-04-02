@@ -40,43 +40,82 @@ export default function Memory() {
     fetchMemory();
   }, [urlPath]);
   
-  // Novo useEffect para garantir reprodução automática
+  // Novo useEffect para garantir reprodução automática e contornar bloqueios de navegador
   useEffect(() => {
     if (memoryData && !loading) {
-      console.log('[Memory] Garantindo reprodução automática');
+      console.log('[Memory] Garantindo reprodução automática com força máxima');
       
       // Força isPlaying como true
       setIsPlaying(true);
       
-      // Para players de Spotify, tentamos iniciar a reprodução após a carga completa da página
-      if (memoryData.musicType === 1 && memoryData.trackId) {
-        // Uma abordagem para contornar a política de autoplay dos navegadores
-        // é usar um evento de interação do usuário para iniciar a reprodução
+      // Função para criar e executar um hack de autoplay
+      function createAutoplayHack() {
+        console.log('[Memory] Criando hack de autoplay');
         
-        // Primeira tentativa imediata 
-        tryPlaySpotify();
+        // Cria um áudio silencioso para desbloquear o autoplay
+        const silentAudio = document.createElement('audio');
+        silentAudio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+        silentAudio.volume = 0.001; // Praticamente inaudível
+        document.body.appendChild(silentAudio);
         
-        // Segunda tentativa com timeout
-        setTimeout(tryPlaySpotify, 1500);
-        
-        // Último recurso: adicionar um listener para qualquer interação do usuário
-        const handleUserInteraction = () => {
-          console.log('[Memory] Interação do usuário detectada, tentando reproduzir');
-          tryPlaySpotify();
-          
-          // Remover eventos após primeira interação
-          ['click', 'touchstart', 'keydown'].forEach(event => {
-            document.removeEventListener(event, handleUserInteraction);
-          });
-        };
-        
-        // Adicionar eventos para capturar qualquer interação
-        ['click', 'touchstart', 'keydown'].forEach(event => {
-          document.addEventListener(event, handleUserInteraction);
+        // Tenta reproduzir o áudio silencioso
+        silentAudio.play().then(() => {
+          console.log('[Memory] Áudio desbloqueado, tentando player');
+          forcePlaySpotify();
+        }).catch(() => {
+          console.log('[Memory] Falha no desbloqueio de áudio');
         });
         
-        // Função para tentar iniciar o player do Spotify
-        function tryPlaySpotify() {
+        // Simulador de toque/clique - cria um evento sintético
+        const touchSimulator = document.createElement('div');
+        touchSimulator.style.position = 'fixed';
+        touchSimulator.style.top = '0';
+        touchSimulator.style.left = '0';
+        touchSimulator.style.width = '100%';
+        touchSimulator.style.height = '100%';
+        touchSimulator.style.zIndex = '9999';
+        touchSimulator.style.opacity = '0';
+        touchSimulator.style.pointerEvents = 'none';
+        document.body.appendChild(touchSimulator);
+        
+        // Função para simular clique do usuário
+        function simulateClick() {
+          // Cria e dispara um evento de mouse
+          const clickEvent = new MouseEvent('click', {
+            view: window,
+            bubbles: true,
+            cancelable: true
+          });
+          touchSimulator.dispatchEvent(clickEvent);
+          
+          // Tenta iniciar a reprodução após o "clique"
+          silentAudio.play().catch(() => {});
+          forcePlaySpotify();
+        }
+        
+        // Simulação de interação do usuário
+        setTimeout(simulateClick, 500);
+        setTimeout(simulateClick, 2000);
+        setTimeout(simulateClick, 5000);
+        
+        // Também tenta via eventos reais
+        ['click', 'touchstart', 'scroll', 'keydown'].forEach(event => {
+          document.addEventListener(event, () => {
+            silentAudio.play().catch(() => {});
+            forcePlaySpotify();
+          }, { once: true });
+        });
+        
+        // Limpa elementos após uso
+        return () => {
+          if (document.body.contains(silentAudio)) document.body.removeChild(silentAudio);
+          if (document.body.contains(touchSimulator)) document.body.removeChild(touchSimulator);
+        };
+      }
+      
+      // Força a reprodução do Spotify de várias maneiras
+      function forcePlaySpotify() {
+        if (memoryData.musicType === 1 && memoryData.trackId) {
           const spotifyIframe = document.getElementById('spotify-preview-iframe');
           if (spotifyIframe) {
             try {
@@ -87,32 +126,46 @@ export default function Memory() {
                 if (memoryData.musicUrl.includes('/album/')) contentType = 'album';
               }
               
-              // Forçar a atualização do iframe com todos os parâmetros necessários e timestamp para evitar cache
+              // 1. Atualiza URL com parâmetros de força máxima e timestamp
               const newSrc = `https://open.spotify.com/embed/${contentType}/${memoryData.trackId}?utm_source=generator&theme=1&autoplay=1&init=1&loop=1&t=${new Date().getTime()}`;
-              console.log('[Memory] Atualizando iframe com:', newSrc);
+              console.log('[Memory] Atualizando iframe com URL de força máxima:', newSrc);
               spotifyIframe.src = newSrc;
               
-              // Tentar enviar comando de play para o iframe do Spotify
+              // 2. Mensagem direta para o iframe
               setTimeout(() => {
                 try {
                   spotifyIframe.contentWindow.postMessage({ command: 'play' }, '*');
                 } catch (e) {
-                  console.log('[Memory] Erro ao enviar comando para iframe:', e);
+                  console.log('[Memory] Erro ao enviar comando via postMessage:', e);
                 }
-              }, 500);
+              }, 800);
+              
+              // 3. Manipulação direta via JavaScript (hack)
+              setTimeout(() => {
+                try {
+                  // Tenta acessar o botão de play dentro do iframe
+                  const iframeDoc = spotifyIframe.contentDocument || spotifyIframe.contentWindow.document;
+                  const playButton = iframeDoc.querySelector('[data-testid="play-button"], button.control-button--circled');
+                  if (playButton) {
+                    console.log('[Memory] Botão de play encontrado, clicando');
+                    playButton.click();
+                  }
+                } catch (e) {
+                  console.log('[Memory] Erro ao tentar acessar conteúdo do iframe:', e);
+                }
+              }, 2000);
             } catch (error) {
-              console.error('[Memory] Erro ao inicializar player:', error);
+              console.error('[Memory] Erro ao tentar reproduzir Spotify:', error);
             }
           }
         }
-        
-        // Retornar função de limpeza para remover os event listeners
-        return () => {
-          ['click', 'touchstart', 'keydown'].forEach(event => {
-            document.removeEventListener(event, handleUserInteraction);
-          });
-        };
       }
+      
+      // Inicia o hack
+      const cleanup = createAutoplayHack();
+      
+      // Retorna função de limpeza
+      return cleanup;
     }
   }, [memoryData, loading]);
   

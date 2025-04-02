@@ -351,59 +351,96 @@ export default function TitlePreview({
   // Efeito para garantir que o estado da reprodução esteja sincronizado com autoplay
   useEffect(() => {
     if (isMemoryPage && isSpotify && trackId) {
-      // Simplificando a lógica - apenas uma tentativa para evitar múltiplos recarregamentos
-      console.log('Configurando reprodução única do Spotify');
+      console.log('[TitlePreview] Configurando hack para autoplay do Spotify');
       
       // Primeira tentativa - imediata
-      const iframe = document.getElementById('spotify-preview-iframe');
-      if (iframe) {
-        console.log('Configurando parâmetros iniciais do iframe do Spotify');
-        // Garantir que os parâmetros de autoplay e init estejam presentes
-        if (!iframe.src.includes('autoplay=1')) {
-          iframe.src = iframe.src.replace('autoplay=0', 'autoplay=1');
-        }
-        if (!iframe.src.includes('init=1')) {
-          iframe.src = iframe.src + '&init=1';
-        }
-      }
-      
-      // Atraso para garantir que o iframe já esteja montado na DOM
-      const timer = setTimeout(() => {
+      const setupAutoplay = () => {
+        // Tenta acessar o iframe do Spotify
         const iframe = document.getElementById('spotify-preview-iframe');
         if (iframe) {
-          console.log('Iniciando player do Spotify apenas uma vez');
+          // Cria um elemento de áudio silencioso para desbloquear a política de autoplay
+          const silentSound = document.createElement('audio');
+          silentSound.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+          silentSound.volume = 0.01; // Volume muito baixo, quase inaudível
           
-          // Atualiza o iframe com autoplay=1 apenas uma vez
-          iframe.src = `https://open.spotify.com/embed/${spotifyContentType}/${trackId}?utm_source=generator&theme=1&autoplay=1&init=1&loop=1&t=${new Date().getTime()}`;
+          // Hack: cria um botão invisível que simula o clique do usuário
+          const autoplayButton = document.createElement('button');
+          autoplayButton.style.position = 'fixed';
+          autoplayButton.style.opacity = '0';
+          autoplayButton.style.pointerEvents = 'none';
+          autoplayButton.style.width = '1px';
+          autoplayButton.style.height = '1px';
+          autoplayButton.style.top = '0';
+          autoplayButton.style.left = '0';
+          autoplayButton.textContent = 'Autoplay';
           
-          // Uma única tentativa com postMessage após um tempo razoável
-          setTimeout(() => {
-            try {
-              iframe.contentWindow.postMessage({ command: 'play' }, '*');
-            } catch (error) {
-              console.error("Erro ao tentar controlar o player via postMessage:", error);
-            }
-          }, 1500);
+          // Adiciona os elementos ao DOM
+          document.body.appendChild(silentSound);
+          document.body.appendChild(autoplayButton);
+          
+          // Tenta reproduzir o som silencioso
+          silentSound.play().then(() => {
+            console.log('[TitlePreview] Política de autoplay desbloqueada!');
+            
+            // Agora tentamos ativar o player do Spotify
+            autoplayButton.addEventListener('click', function handleClick() {
+              // Garante que os parâmetros corretos estejam na URL
+              iframe.src = `https://open.spotify.com/embed/${spotifyContentType}/${trackId}?utm_source=generator&theme=1&autoplay=1&init=1&loop=1&t=${new Date().getTime()}`;
+              
+              // Tenta enviar mensagem de play para o iframe
+              setTimeout(() => {
+                try {
+                  iframe.contentWindow.postMessage({ command: 'play' }, '*');
+                } catch (e) {
+                  console.log('[TitlePreview] Erro ao enviar comando de play:', e);
+                }
+              }, 500);
+              
+              // Remove o listener após uso
+              autoplayButton.removeEventListener('click', handleClick);
+            });
+            
+            // Simula o clique 
+            setTimeout(() => autoplayButton.click(), 500);
+            
+            // E uma segunda vez para ter certeza
+            setTimeout(() => autoplayButton.click(), 2000);
+            
+          }).catch(e => {
+            console.log('[TitlePreview] Falha ao desbloquear autoplay:', e);
+          });
+          
+          // Se a reprodução falhou, tentamos outra abordagem usando o clique/toque do usuário
+          const userInteractionListener = () => {
+            silentSound.play().catch(() => console.log('Ainda com bloqueio após interação'));
+            autoplayButton.click();
+            
+            // Remove os listeners após a primeira interação
+            ['click', 'touchstart', 'scroll', 'keydown'].forEach(event => {
+              document.removeEventListener(event, userInteractionListener);
+            });
+          };
+          
+          // Adiciona listeners para capturar interação do usuário
+          ['click', 'touchstart', 'scroll', 'keydown'].forEach(event => {
+            document.addEventListener(event, userInteractionListener, { once: true });
+          });
         }
-      }, 800);
+      };
       
-      // Terceira tentativa com um atraso maior
-      const lastAttempt = setTimeout(() => {
-        const iframe = document.getElementById('spotify-preview-iframe');
-        if (iframe) {
-          try {
-            console.log('Última tentativa de ativar player do Spotify');
-            iframe.src = `https://open.spotify.com/embed/${spotifyContentType}/${trackId}?utm_source=generator&theme=1&autoplay=1&init=1&loop=1&t=${new Date().getTime()}-final`;
-            iframe.contentWindow.postMessage({ command: 'play' }, '*');
-          } catch (error) {
-            console.error("Erro na tentativa final de controlar o player:", error);
-          }
-        }
-      }, 3000);
+      // Inicia o processo
+      setupAutoplay();
+      
+      // Tenta novamente após um tempo
+      const retryTimer = setTimeout(setupAutoplay, 3000);
       
       return () => {
-        clearTimeout(timer);
-        clearTimeout(lastAttempt);
+        clearTimeout(retryTimer);
+        
+        // Remove listeners que possam ter sido adicionados
+        ['click', 'touchstart', 'scroll', 'keydown'].forEach(event => {
+          document.removeEventListener(event, () => {});
+        });
       };
     }
   }, [isMemoryPage, isSpotify, trackId, spotifyContentType]);
