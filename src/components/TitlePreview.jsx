@@ -1,4 +1,4 @@
-import { Box, Paper, Typography, IconButton, Avatar, ImageList, ImageListItem, CircularProgress } from '@mui/material';
+import { Box, Paper, Typography, IconButton, Avatar, ImageList, ImageListItem, CircularProgress, Button } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
@@ -360,13 +360,18 @@ export default function TitlePreview({
         if (iframe) {
           console.log('Iniciando player do Spotify apenas uma vez');
           
-          // Atualiza o iframe com autoplay=1 apenas uma vez
-          iframe.src = `https://open.spotify.com/embed/${spotifyContentType}/${trackId}?utm_source=generator&theme=1&autoplay=1&loop=1&t=${new Date().getTime()}`;
+          // Atualiza o iframe com autoplay=1 e play=1 para garantir reprodução automática
+          iframe.src = `https://open.spotify.com/embed/${spotifyContentType}/${trackId}?utm_source=generator&theme=1&autoplay=1&loop=1&play=1&t=${new Date().getTime()}`;
           
           // Uma única tentativa com postMessage após um tempo razoável
           setTimeout(() => {
             try {
               iframe.contentWindow.postMessage({ command: 'play' }, '*');
+              // Tentativa adicional com a API do Spotify Embed
+              iframe.contentWindow.postMessage({
+                type: 'spotify',
+                action: 'play'
+              }, '*');
             } catch (error) {
               console.error("Erro ao tentar controlar o player via postMessage:", error);
             }
@@ -435,23 +440,63 @@ export default function TitlePreview({
           }}
         >
           {isValidSpotifyTrack ? (
-            <iframe 
-              id="spotify-preview-iframe"
-              src={`https://open.spotify.com/embed/${spotifyContentType}/${trackId}?utm_source=generator&theme=1${isMemoryPage ? '&autoplay=1' : '&autoplay=0'}&loop=1`}
-              width="100%" 
-              height={80}
-              frameBorder="0" 
-              allowFullScreen=""
-              allowtransparency="true" 
-              allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
-              loading="eager"
-              style={{ 
-                display: 'block',
-                backgroundColor: 'transparent',
-                borderRadius: '12px',
-                maxWidth: '100%'
-              }}
-            />
+            <>
+              <iframe 
+                id="spotify-preview-iframe"
+                src={`https://open.spotify.com/embed/${spotifyContentType}/${trackId}?utm_source=generator&theme=1&autoplay=1&loop=1&play=1`}
+                width="100%" 
+                height={80}
+                frameBorder="0" 
+                allowFullScreen=""
+                allowtransparency="true" 
+                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
+                loading="eager"
+                style={{ 
+                  display: 'block',
+                  backgroundColor: 'transparent',
+                  borderRadius: '12px',
+                  maxWidth: '100%'
+                }}
+              />
+              {isMemoryPage && (
+                <Box sx={{ 
+                  mt: 0.5, 
+                  display: 'flex', 
+                  justifyContent: 'center',
+                  opacity: 0.7
+                }}>
+                  <Button 
+                    size="small" 
+                    variant="text" 
+                    onClick={() => {
+                      const iframe = document.getElementById('spotify-preview-iframe');
+                      if (iframe) {
+                        // Recarrega o iframe com novos parâmetros
+                        iframe.src = `https://open.spotify.com/embed/${spotifyContentType}/${trackId}?utm_source=generator&theme=1&autoplay=1&loop=1&play=1&t=${new Date().getTime()}`;
+                        // Tenta enviar mensagens de controle
+                        setTimeout(() => {
+                          try {
+                            iframe.contentWindow.postMessage({ command: 'play' }, '*');
+                            iframe.contentWindow.postMessage({ type: 'spotify', action: 'play' }, '*');
+                          } catch (error) {
+                            console.error("Erro ao tentar controlar o player via postMessage:", error);
+                          }
+                        }, 500);
+                      }
+                    }} 
+                    sx={{ 
+                      fontSize: '0.7rem', 
+                      color: 'text.secondary',
+                      padding: '2px 8px',
+                      minWidth: 0
+                    }}
+                  >
+                    <PlayArrowIcon fontSize="small" sx={{ mr: 0.5, fontSize: '0.9rem' }} /> 
+                    Iniciar música
+                  </Button>
+                </Box>
+              )}
+            </>
           ) : (
             isYoutube && videoId ? (
               <>

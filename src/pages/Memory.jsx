@@ -48,8 +48,37 @@ export default function Memory() {
       // Força isPlaying como true
       setIsPlaying(true);
       
-      // A inicialização do player agora é tratada exclusivamente no TitlePreview
-      // para evitar duplicação de tentativas de reprodução
+      // Verifica especificamente se é Spotify para iniciar a reprodução
+      if (memoryData.musicType === 1 && memoryData.trackId) {
+        // Pequeno atraso para garantir que a página foi totalmente carregada
+        setTimeout(() => {
+          try {
+            // Tenta encontrar o iframe do Spotify
+            const spotifyFrame = document.getElementById('spotify-preview-iframe');
+            if (spotifyFrame) {
+              console.log('[Memory] Tentando iniciar reprodução do Spotify');
+              
+              // Tenta enviar mensagem para o iframe para iniciar a reprodução
+              window.addEventListener('message', (event) => {
+                // Verifica se a origem da mensagem é confiável (Spotify)
+                if (event.origin.includes('spotify.com')) {
+                  console.log('[Memory] Mensagem recebida do Spotify:', event.data);
+                }
+              }, { once: true });
+              
+              // Enviar comando de reprodução
+              try {
+                spotifyFrame.contentWindow.postMessage({ command: 'play' }, '*');
+                spotifyFrame.contentWindow.postMessage({ type: 'spotify', action: 'play' }, '*');
+              } catch (err) {
+                console.error('[Memory] Erro ao enviar comando para o iframe:', err);
+              }
+            }
+          } catch (error) {
+            console.error('[Memory] Erro ao tentar iniciar player:', error);
+          }
+        }, 1500);
+      }
     }
   }, [memoryData, loading]);
   
