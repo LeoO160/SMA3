@@ -27,7 +27,7 @@
     "dayjs": "^1.11.13",
     "dompurify": "^3.2.4",
     "emoji-picker-react": "^4.12.0",
-    "framer-motion": "^12.5.0",
+    "framer-motion": "^12.6.3",
     "meu-projeto-react": "file:",
     "node-fetch": "^3.3.2",
     "notistack": "^3.0.2",

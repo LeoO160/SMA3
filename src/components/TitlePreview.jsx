@@ -1297,6 +1297,100 @@ export default function TitlePreview({
     });
   }, [webBgColor, isGradient]);
 
+  const [hasUserInteraction, setHasUserInteraction] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const maxRetries = 5;
+
+  // Monitora interações do usuário
+  useEffect(() => {
+    const handleUserInteraction = () => {
+      setHasUserInteraction(true);
+    };
+
+    window.addEventListener('touchstart', handleUserInteraction);
+    window.addEventListener('click', handleUserInteraction);
+
+    return () => {
+      window.removeEventListener('touchstart', handleUserInteraction);
+      window.removeEventListener('click', handleUserInteraction);
+    };
+  }, []);
+
+  // Efeito para controlar a reprodução
+  useEffect(() => {
+    if (!isPlaying) return;
+
+    console.log('[TitlePreview] isPlaying alterado para true, tentando iniciar reprodução');
+    
+    const attemptPlay = () => {
+      try {
+        if (musicType === 1 && trackId) {
+          // Spotify
+          const spotifyFrame = document.getElementById('spotify-preview-iframe');
+          if (spotifyFrame) {
+            console.log('[TitlePreview] Tentando iniciar Spotify');
+            
+            // Atualiza a URL com timestamp para evitar cache
+            const timestamp = new Date().getTime();
+            const newSrc = `https://open.spotify.com/embed/track/${trackId}?utm_source=generator&autoplay=1&play=1&t=${timestamp}`;
+            spotifyFrame.src = newSrc;
+
+            // Tenta múltiplos formatos de comando
+            const commands = [
+              { command: 'play' },
+              { type: 'spotify', action: 'play' },
+              { command: 'toggle', toggle: true }
+            ];
+
+            setTimeout(() => {
+              commands.forEach(cmd => {
+                try {
+                  spotifyFrame.contentWindow.postMessage(cmd, '*');
+                } catch (err) {
+                  console.error('[TitlePreview] Erro ao enviar comando:', err);
+                }
+              });
+            }, 500);
+          }
+        } else if (musicType === 2 && videoId) {
+          // YouTube
+          const youtubeFrame = document.getElementById('youtube-preview-iframe');
+          if (youtubeFrame) {
+            console.log('[TitlePreview] Tentando iniciar YouTube');
+            youtubeFrame.contentWindow.postMessage(
+              JSON.stringify({
+                event: 'command',
+                func: 'playVideo',
+                args: []
+              }),
+              '*'
+            );
+          }
+        }
+      } catch (error) {
+        console.error('[TitlePreview] Erro ao tentar iniciar player:', error);
+        if (retryCount < maxRetries) {
+          setRetryCount(prev => prev + 1);
+          setTimeout(attemptPlay, 1000);
+        }
+      }
+    };
+
+    // Tenta iniciar a reprodução imediatamente
+    attemptPlay();
+    
+    // E também após um delay para garantir que os elementos estão prontos
+    setTimeout(attemptPlay, 1000);
+    setTimeout(attemptPlay, 2000);
+  }, [isPlaying, musicType, trackId, videoId, retryCount]);
+
+  // Efeito para iniciar reprodução quando isMemoryPage é true
+  useEffect(() => {
+    if (isMemoryPage && !isPlaying) {
+      setIsPlaying(true);
+    }
+  }, [isMemoryPage]);
+
   return (
     <Box
       sx={{
@@ -1426,6 +1520,28 @@ export default function TitlePreview({
         }}>
           {renderContent()}
         </Box>
+      )}
+
+      {/* Adiciona botão de play para dispositivos móveis */}
+      {isMobile && !hasUserInteraction && (
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={() => setHasUserInteraction(true)}
+          sx={{
+            position: 'fixed',
+            bottom: 20,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 1000,
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            '&:hover': {
+              backgroundColor: 'rgba(0, 0, 0, 0.9)'
+            }
+          }}
+        >
+          Tocar Música
+        </Button>
       )}
     </Box>
   );
