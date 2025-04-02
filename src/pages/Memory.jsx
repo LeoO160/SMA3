@@ -93,7 +93,7 @@ export default function Memory() {
   
   // Efeito para garantir reprodução automática do Spotify
   useEffect(() => {
-    if (memoryData && !loading && hasUserInteraction && !showBlackScreen) {
+    if (memoryData && !loading && !showBlackScreen) {
       console.log('[Memory] Garantindo reprodução automática');
       
       // Força isPlaying como true
@@ -108,34 +108,24 @@ export default function Memory() {
             if (spotifyFrame) {
               console.log('[Memory] Tentando iniciar reprodução do Spotify via iframe:', spotifyFrame);
               
-              // Registra um listener para mensagens do iframe
-              window.addEventListener('message', (event) => {
-                // Verifica se a origem da mensagem é confiável (Spotify)
-                if (event.origin.includes('spotify.com')) {
-                  console.log('[Memory] Mensagem recebida do Spotify:', event.data);
-                }
-              }, { once: true });
+              // Atualiza a URL do iframe com parâmetros de autoplay
+              const timestamp = new Date().getTime();
+              spotifyFrame.src = `https://open.spotify.com/embed/track/${memoryData.trackId}?utm_source=generator&autoplay=1&play=1&t=${timestamp}`;
               
               // Tenta múltiplas abordagens para iniciar a reprodução
-              try {
-                console.log('[Memory] Enviando comandos postMessage para o iframe');
-                // Comando padrão
-                spotifyFrame.contentWindow.postMessage({ command: 'play' }, '*');
-                // Comando alternativo
-                spotifyFrame.contentWindow.postMessage({ type: 'spotify', action: 'play' }, '*');
-                // Comando específico da API Embed do Spotify
-                spotifyFrame.contentWindow.postMessage({ command: 'toggle', toggle: true }, '*');
-                
-                // Opção alternativa: recarregar o iframe com parâmetros para autoplay
-                const currentSrc = spotifyFrame.src;
-                if (!currentSrc.includes('autoplay=1')) {
-                  console.log('[Memory] Atualizando URL do iframe para forçar autoplay');
-                  const timestamp = new Date().getTime();
-                  spotifyFrame.src = `${currentSrc.split('?')[0]}?autoplay=1&play=1&t=${timestamp}`;
+              setTimeout(() => {
+                try {
+                  console.log('[Memory] Enviando comandos postMessage para o iframe');
+                  // Comando padrão
+                  spotifyFrame.contentWindow.postMessage({ command: 'play' }, '*');
+                  // Comando alternativo
+                  spotifyFrame.contentWindow.postMessage({ type: 'spotify', action: 'play' }, '*');
+                  // Comando específico da API Embed do Spotify
+                  spotifyFrame.contentWindow.postMessage({ command: 'toggle', toggle: true }, '*');
+                } catch (err) {
+                  console.error('[Memory] Erro ao enviar comando para o iframe:', err);
                 }
-              } catch (err) {
-                console.error('[Memory] Erro ao enviar comando para o iframe:', err);
-              }
+              }, 1000);
             } else {
               console.log('[Memory] Iframe do Spotify não encontrado, tentando novamente em 500ms');
               // Se o iframe ainda não estiver disponível, tenta novamente após um curto período
@@ -157,7 +147,7 @@ export default function Memory() {
         setTimeout(attemptToPlay, 3000);
       }
     }
-  }, [memoryData, loading, hasUserInteraction, retryCount, showBlackScreen]);
+  }, [memoryData, loading, retryCount, showBlackScreen]);
 
   // Função para iniciar a transição ao clicar no botão
   const handleStartMemory = () => {
