@@ -50,12 +50,35 @@ export default function Memory() {
       
       // Para players de Spotify, tentamos iniciar a reprodução após a carga completa da página
       if (memoryData.musicType === 1 && memoryData.trackId) {
-        // Verificar se o iframe já existe (em caso de carregamento rápido)
-        setTimeout(() => {
+        // Uma abordagem para contornar a política de autoplay dos navegadores
+        // é usar um evento de interação do usuário para iniciar a reprodução
+        
+        // Primeira tentativa imediata 
+        tryPlaySpotify();
+        
+        // Segunda tentativa com timeout
+        setTimeout(tryPlaySpotify, 1500);
+        
+        // Último recurso: adicionar um listener para qualquer interação do usuário
+        const handleUserInteraction = () => {
+          console.log('[Memory] Interação do usuário detectada, tentando reproduzir');
+          tryPlaySpotify();
+          
+          // Remover eventos após primeira interação
+          ['click', 'touchstart', 'keydown'].forEach(event => {
+            document.removeEventListener(event, handleUserInteraction);
+          });
+        };
+        
+        // Adicionar eventos para capturar qualquer interação
+        ['click', 'touchstart', 'keydown'].forEach(event => {
+          document.addEventListener(event, handleUserInteraction);
+        });
+        
+        // Função para tentar iniciar o player do Spotify
+        function tryPlaySpotify() {
           const spotifyIframe = document.getElementById('spotify-preview-iframe');
           if (spotifyIframe) {
-            console.log('[Memory] Forçando inicialização do player do Spotify');
-            
             try {
               // Determina o tipo de conteúdo Spotify
               let contentType = 'track';
@@ -64,23 +87,31 @@ export default function Memory() {
                 if (memoryData.musicUrl.includes('/album/')) contentType = 'album';
               }
               
-              // Forçar a atualização do iframe com todos os parâmetros necessários
+              // Forçar a atualização do iframe com todos os parâmetros necessários e timestamp para evitar cache
               const newSrc = `https://open.spotify.com/embed/${contentType}/${memoryData.trackId}?utm_source=generator&theme=1&autoplay=1&init=1&loop=1&t=${new Date().getTime()}`;
+              console.log('[Memory] Atualizando iframe com:', newSrc);
               spotifyIframe.src = newSrc;
               
-              // Tentar enviar comando de play após um curto período
-              window.addEventListener('message', function spotifyMessageHandler(e) {
-                if (e.data && typeof e.data === 'object' && e.data.type === 'ready') {
-                  console.log('[Memory] Player do Spotify pronto, enviando comando de play');
+              // Tentar enviar comando de play para o iframe do Spotify
+              setTimeout(() => {
+                try {
                   spotifyIframe.contentWindow.postMessage({ command: 'play' }, '*');
-                  window.removeEventListener('message', spotifyMessageHandler);
+                } catch (e) {
+                  console.log('[Memory] Erro ao enviar comando para iframe:', e);
                 }
-              });
+              }, 500);
             } catch (error) {
               console.error('[Memory] Erro ao inicializar player:', error);
             }
           }
-        }, 1000);
+        }
+        
+        // Retornar função de limpeza para remover os event listeners
+        return () => {
+          ['click', 'touchstart', 'keydown'].forEach(event => {
+            document.removeEventListener(event, handleUserInteraction);
+          });
+        };
       }
     }
   }, [memoryData, loading]);

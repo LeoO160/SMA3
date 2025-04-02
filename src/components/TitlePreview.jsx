@@ -9,7 +9,7 @@ import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import LockIcon from '@mui/icons-material/Lock';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import React from 'react';
@@ -1281,6 +1281,62 @@ export default function TitlePreview({
       backgroundConfig
     });
   }, [webBgColor, isGradient]);
+
+  // Adiciona flag para controlar se o usuário já interagiu com a página
+  const [userInteracted, setUserInteracted] = useState(false);
+  
+  // Função para reproduzir o player de Spotify após interação do usuário
+  const playSpotifyAfterInteraction = useCallback(() => {
+    if (userInteracted || !isMemoryPage || !isPlaying || musicType !== 1) return;
+    
+    setUserInteracted(true);
+    console.log('[TitlePreview] Usuário interagiu, tentando reproduzir música');
+    
+    try {
+      const spotifyIframe = document.getElementById('spotify-preview-iframe');
+      if (spotifyIframe) {
+        // Adicionar parâmetros de autoplay e forçar recarregamento
+        let currentSrc = spotifyIframe.src;
+        if (!currentSrc.includes('autoplay=1')) {
+          currentSrc = currentSrc.includes('?') 
+            ? `${currentSrc}&autoplay=1&init=1&t=${Date.now()}`
+            : `${currentSrc}?autoplay=1&init=1&t=${Date.now()}`;
+          spotifyIframe.src = currentSrc;
+        }
+        
+        // Enviar comando para reproduzir após um curto delay
+        setTimeout(() => {
+          try {
+            spotifyIframe.contentWindow.postMessage({ command: 'play' }, '*');
+          } catch (e) {
+            console.log('[TitlePreview] Erro ao enviar comando de play:', e);
+          }
+        }, 300);
+      }
+    } catch (error) {
+      console.error('[TitlePreview] Erro ao tentar reproduzir após interação:', error);
+    }
+  }, [isMemoryPage, isPlaying, musicType, userInteracted]);
+  
+  // Adicionar event listeners para interações do usuário
+  useEffect(() => {
+    if (isMemoryPage && musicType === 1 && !userInteracted) {
+      const eventHandler = () => playSpotifyAfterInteraction();
+      
+      // Eventos que representam interação do usuário
+      const events = ['click', 'touchstart', 'keydown', 'scroll'];
+      
+      events.forEach(event => {
+        document.addEventListener(event, eventHandler, { once: true });
+      });
+      
+      return () => {
+        events.forEach(event => {
+          document.removeEventListener(event, eventHandler);
+        });
+      };
+    }
+  }, [isMemoryPage, musicType, playSpotifyAfterInteraction, userInteracted]);
 
   return (
     <Box
