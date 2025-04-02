@@ -110,10 +110,15 @@ export default function Memory() {
               
               // Atualiza a URL do iframe com parâmetros de autoplay
               const timestamp = new Date().getTime();
-              spotifyFrame.src = `https://open.spotify.com/embed/track/${memoryData.trackId}?utm_source=generator&autoplay=1&play=1&t=${timestamp}`;
+              const newSrc = `https://open.spotify.com/embed/track/${memoryData.trackId}?utm_source=generator&autoplay=1&play=1&t=${timestamp}`;
+              
+              // Só atualiza a URL se for diferente
+              if (spotifyFrame.src !== newSrc) {
+                spotifyFrame.src = newSrc;
+              }
               
               // Tenta múltiplas abordagens para iniciar a reprodução
-              setTimeout(() => {
+              const tryPlayCommands = () => {
                 try {
                   console.log('[Memory] Enviando comandos postMessage para o iframe');
                   // Comando padrão
@@ -122,10 +127,25 @@ export default function Memory() {
                   spotifyFrame.contentWindow.postMessage({ type: 'spotify', action: 'play' }, '*');
                   // Comando específico da API Embed do Spotify
                   spotifyFrame.contentWindow.postMessage({ command: 'toggle', toggle: true }, '*');
+                  
+                  // Tenta clicar no botão de play se existir
+                  const playButton = spotifyFrame.contentDocument?.querySelector('button[aria-label="Play"]');
+                  if (playButton) {
+                    playButton.click();
+                  }
                 } catch (err) {
                   console.error('[Memory] Erro ao enviar comando para o iframe:', err);
                 }
-              }, 1000);
+              };
+              
+              // Tenta os comandos após um delay
+              setTimeout(tryPlayCommands, 1000);
+              
+              // Tenta novamente após um delay maior
+              setTimeout(tryPlayCommands, 2000);
+              
+              // Tenta uma última vez após um delay ainda maior
+              setTimeout(tryPlayCommands, 3000);
             } else {
               console.log('[Memory] Iframe do Spotify não encontrado, tentando novamente em 500ms');
               // Se o iframe ainda não estiver disponível, tenta novamente após um curto período
@@ -143,7 +163,10 @@ export default function Memory() {
         // Primeira tentativa após um delay inicial
         setTimeout(attemptToPlay, 1000);
         
-        // Segunda tentativa após um delay maior, caso a primeira falhe
+        // Segunda tentativa após um delay maior
+        setTimeout(attemptToPlay, 2000);
+        
+        // Terceira tentativa após um delay ainda maior
         setTimeout(attemptToPlay, 3000);
       }
     }
