@@ -1,0 +1,71 @@
+import { useState, useEffect } from 'react';
+import { Box, Typography, Button, CircularProgress } from '@mui/material';
+
+export default function Create() {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    console.log("Create component mounted");
+    
+    // Simula carregamento para ver se o componente renderiza
+    const timer = setTimeout(() => {
+      console.log("Setting loading to false");
+      setLoading(false);
+    }, 2000);
+    
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (error) {
+    return (
+      <Box sx={{ p: 4, textAlign: 'center' }}>
+        <Typography variant="h4" color="error">Erro ao carregar</Typography>
+        <Typography variant="body1">{error.message || 'Ocorreu um erro inesperado'}</Typography>
+        <pre>{error.stack}</pre>
+        <Button 
+          variant="contained" 
+          onClick={() => window.location.reload()}
+          sx={{ mt: 2 }}
+        >
+          Tentar novamente
+        </Button>
+      </Box>
+    );
+  }
+
+  if (loading) {
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: 'column',
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        height: '100vh'
+      }}>
+        <CircularProgress size={60} />
+        <Typography variant="h6" sx={{ mt: 2 }}>
+          Carregando página de criação...
+        </Typography>
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ p: 4, textAlign: 'center' }}>
+      <Typography variant="h3">Página de Criação</Typography>
+      <Typography variant="body1" sx={{ mt: 2 }}>
+        Esta é a versão simplificada da página para teste.
+      </Typography>
+      <Button 
+        variant="contained" 
+        color="primary"
+        sx={{ mt: 4 }}
+        onClick={() => setError(new Error("Erro de teste"))}
+      >
+        Testar erro
+      </Button>
+    </Box>
+  );
+}
+

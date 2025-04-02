@@ -1,0 +1,53 @@
+{
+  "name": "meu-projeto-react",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "setup": "node index.js"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@fontsource/dancing-script": "^5.2.5",
+    "@fontsource/libre-baskerville": "^5.2.5",
+    "@fontsource/playfair-display": "^5.2.5",
+    "@fontsource/poppins": "^5.2.5",
+    "@fontsource/quicksand": "^5.2.5",
+    "@mui/icons-material": "^6.4.7",
+    "@mui/material": "^6.4.7",
+    "@mui/x-date-pickers": "^7.27.3",
+    "@supabase/supabase-js": "^2.49.3",
+    "@tinymce/tinymce-react": "^6.0.0",
+    "@types/dompurify": "^3.2.0",
+    "dayjs": "^1.11.13",
+    "dompurify": "^3.2.4",
+    "emoji-picker-react": "^4.12.0",
+    "framer-motion": "^12.5.0",
+    "meu-projeto-react": "file:",
+    "node-fetch": "^3.3.2",
+    "notistack": "^3.0.2",
+    "qrcode.react": "^4.2.0",
+    "react": "^18.2.0",
+    "react-color": "^2.19.3",
+    "react-dom": "^18.2.0",
+    "react-player": "^2.16.0",
+    "react-quill": "^2.0.0",
+    "react-router-dom": "^7.3.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.21.0",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^9.21.0",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "eslint-plugin-react-refresh": "^0.4.19",
+    "globals": "^15.15.0",
+    "vite": "^6.2.0"
+  }
+}

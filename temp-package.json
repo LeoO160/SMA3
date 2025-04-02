@@ -1,0 +1,14 @@
+{
+  "name": "supabase-setup",
+  "version": "1.0.0",
+  "description": "Script para configurar o Supabase",
+  "main": "index.js",
+  "scripts": {
+    "setup": "node index.js"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  },
+  "type": "module"
+} 
+ 

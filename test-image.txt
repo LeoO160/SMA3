@@ -1,0 +1,1 @@
+Este é um arquivo de teste para o Supabase Storage. 1742432360111

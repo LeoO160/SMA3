@@ -1,0 +1,45 @@
+.theme-selector {
+  margin: 1rem 0;
+}
+
+.theme-option {
+  transition: all 0.2s ease-in-out;
+}
+
+.theme-option.selected {
+  transform: translateY(-4px);
+}
+
+.theme-preview {
+  box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.1);
+  /* Adiciona borda de destaque para melhor visibilidade */
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  /* Adiciona sombra externa para destacar contra fundos claros */
+  filter: drop-shadow(0px 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+/* Adiciona um efeito de aura ao redor dos ícones selecionados */
+.theme-option.selected .theme-preview {
+  box-shadow: 0 0 0 2px #3f51b5, 0 0 8px 2px rgba(63, 81, 181, 0.5);
+  filter: drop-shadow(0px 3px 5px rgba(0, 0, 0, 0.4));
+}
+
+/* Variáveis para o gradiente personalizado */
+:root {
+  --gradient-color-1: #ff69b4;
+  --gradient-color-2: #4caf50;
+}
+
+/* Responsividade */
+@media (max-width: 600px) {
+  .theme-selector {
+    overflow-x: auto;
+    padding-bottom: 10px;
+  }
+} 
+@media (max-width: 600px) {
+  .theme-selector {
+    overflow-x: auto;
+    padding-bottom: 10px;
+  }
+} 

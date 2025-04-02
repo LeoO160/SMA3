@@ -1,0 +1,233 @@
+/* Estilos gerais para os containers de efeitos */
+.petals-container,
+.hearts-container,
+.fireworks-container,
+.bubbles-container,
+.confetti-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1000;
+  overflow: hidden;
+}
+
+/* Estilos para pétalas */
+.petal {
+  position: absolute;
+  top: -50px;
+  width: 20px;
+  height: 20px;
+  background-color: #ffcad4;
+  border-radius: 75% 0 75% 0;
+  animation: falling linear forwards;
+}
+
+@keyframes falling {
+  0% {
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+  100% {
+    transform: translateY(100vh) rotate(720deg) scale(0.5);
+  }
+}
+
+/* Estilos para corações */
+.heart {
+  position: absolute;
+  bottom: -20px;
+  animation: floating ease-in-out infinite;
+}
+
+@keyframes floating {
+  0% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-200px) rotate(10deg);
+  }
+  100% {
+    transform: translateY(-400px) rotate(0deg);
+  }
+}
+
+/* Estilos para fogos de artifício */
+.particle {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  opacity: 1;
+}
+
+/* Estilos para bolhas */
+.bubble {
+  position: absolute;
+  bottom: -50px;
+  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.8), rgba(173, 216, 230, 0.3));
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+  animation: rise linear forwards;
+}
+
+@keyframes rise {
+  0% {
+    transform: translateY(0) translateX(0);
+  }
+  50% {
+    transform: translateY(-50vh) translateX(20px);
+  }
+  100% {
+    transform: translateY(-100vh) translateX(0);
+  }
+}
+
+/* Estilos para o seletor de efeitos */
+.effects-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.effect-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  padding: 10px;
+  border-radius: 8px;
+  transition: all 0.3s;
+  width: 100px;
+  background-color: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.effect-option:hover {
+  background-color: rgba(173, 216, 230, 0.3);
+  transform: translateY(-3px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.effect-option.selected {
+  background-color: rgba(173, 216, 230, 0.5);
+  border: 2px solid #5ba3d0;
+  box-shadow: 0 0 0 2px rgba(91, 163, 208, 0.5), 0 3px 10px rgba(0, 0, 0, 0.4);
+  transform: translateY(-3px);
+}
+
+.effect-icon {
+  font-size: 24px;
+  margin-bottom: 5px;
+  filter: drop-shadow(0px 2px 3px rgba(0, 0, 0, 0.4));
+  transition: all 0.2s ease;
+}
+
+.effect-option:hover .effect-icon {
+  transform: scale(1.1);
+  filter: drop-shadow(0px 3px 5px rgba(0, 0, 0, 0.5));
+}
+
+.effect-name {
+  font-size: 14px;
+  text-align: center;
+  font-weight: 500;
+  color: #333;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+  .effects-selector {
+    justify-content: center;
+  }
+  
+  .effect-option {
+    width: 80px;
+  }
+}
+
+/* Estilos para confetes */
+.confetti {
+  position: absolute;
+  top: -30px;
+  animation: confetti-fall linear forwards;
+}
+
+.confetti-circle {
+  border-radius: 50%;
+}
+
+.confetti-square {
+  border-radius: 0;
+}
+
+.confetti-triangle {
+  width: 0 !important;
+  height: 0 !important;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 10px solid;
+  background-color: transparent !important;
+}
+
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(0) rotate(0) scale(1);
+  }
+  50% {
+    transform: translateY(50vh) rotate(180deg) scale(0.8) translateX(20px);
+  }
+  100% {
+    transform: translateY(100vh) rotate(360deg) scale(0.6) translateX(-20px);
+  }
+}
+
+/* Estilos para o container de arco-íris com emojis */
+.rainbow-emoji-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.rainbow-emoji {
+  position: absolute;
+  animation: rainbow-float ease-in-out forwards;
+  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.8));
+}
+
+@keyframes rainbow-float {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    transform: translateY(-30px) rotate(5deg);
+    opacity: 1;
+  }
+  25% {
+    transform: translateY(-100px) rotate(-8deg) translateX(20px);
+  }
+  40% {
+    transform: translateY(-180px) rotate(8deg) translateX(-15px);
+  }
+  60% {
+    transform: translateY(-260px) rotate(-8deg) translateX(10px);
+  }
+  80% {
+    transform: translateY(-350px) rotate(5deg) translateX(-10px);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-400px) rotate(0deg);
+    opacity: 0;
+  }
+} 
