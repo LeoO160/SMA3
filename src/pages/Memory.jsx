@@ -40,7 +40,7 @@ export default function Memory() {
     fetchMemory();
   }, [urlPath]);
   
-  // Novo useEffect para garantir reprodução automática do Spotify
+  // Novo useEffect para garantir reprodução automática
   useEffect(() => {
     if (memoryData && !loading) {
       console.log('[Memory] Garantindo reprodução automática');
@@ -48,58 +48,39 @@ export default function Memory() {
       // Força isPlaying como true
       setIsPlaying(true);
       
-      // Verifica especificamente se é Spotify para iniciar a reprodução
+      // Para players de Spotify, tentamos iniciar a reprodução após a carga completa da página
       if (memoryData.musicType === 1 && memoryData.trackId) {
-        const attemptToPlay = () => {
-          try {
-            // Tenta encontrar o iframe do Spotify
-            const spotifyFrame = document.getElementById('spotify-preview-iframe');
-            if (spotifyFrame) {
-              console.log('[Memory] Tentando iniciar reprodução do Spotify via iframe:', spotifyFrame);
-              
-              // Registra um listener para mensagens do iframe
-              window.addEventListener('message', (event) => {
-                // Verifica se a origem da mensagem é confiável (Spotify)
-                if (event.origin.includes('spotify.com')) {
-                  console.log('[Memory] Mensagem recebida do Spotify:', event.data);
-                }
-              }, { once: true });
-              
-              // Tenta múltiplas abordagens para iniciar a reprodução
-              try {
-                console.log('[Memory] Enviando comandos postMessage para o iframe');
-                // Comando padrão
-                spotifyFrame.contentWindow.postMessage({ command: 'play' }, '*');
-                // Comando alternativo
-                spotifyFrame.contentWindow.postMessage({ type: 'spotify', action: 'play' }, '*');
-                // Comando específico da API Embed do Spotify
-                spotifyFrame.contentWindow.postMessage({ command: 'toggle', toggle: true }, '*');
-                
-                // Opção alternativa: recarregar o iframe com parâmetros para autoplay
-                const currentSrc = spotifyFrame.src;
-                if (!currentSrc.includes('autoplay=1')) {
-                  console.log('[Memory] Atualizando URL do iframe para forçar autoplay');
-                  const timestamp = new Date().getTime();
-                  spotifyFrame.src = `${currentSrc.split('?')[0]}?autoplay=1&play=1&t=${timestamp}`;
-                }
-              } catch (err) {
-                console.error('[Memory] Erro ao enviar comando para o iframe:', err);
+        // Verificar se o iframe já existe (em caso de carregamento rápido)
+        setTimeout(() => {
+          const spotifyIframe = document.getElementById('spotify-preview-iframe');
+          if (spotifyIframe) {
+            console.log('[Memory] Forçando inicialização do player do Spotify');
+            
+            try {
+              // Determina o tipo de conteúdo Spotify
+              let contentType = 'track';
+              if (memoryData.musicUrl) {
+                if (memoryData.musicUrl.includes('/playlist/')) contentType = 'playlist';
+                if (memoryData.musicUrl.includes('/album/')) contentType = 'album';
               }
-            } else {
-              console.log('[Memory] Iframe do Spotify não encontrado, tentando novamente em 500ms');
-              // Se o iframe ainda não estiver disponível, tenta novamente após um curto período
-              setTimeout(attemptToPlay, 500);
+              
+              // Forçar a atualização do iframe com todos os parâmetros necessários
+              const newSrc = `https://open.spotify.com/embed/${contentType}/${memoryData.trackId}?utm_source=generator&theme=1&autoplay=1&init=1&loop=1&t=${new Date().getTime()}`;
+              spotifyIframe.src = newSrc;
+              
+              // Tentar enviar comando de play após um curto período
+              window.addEventListener('message', function spotifyMessageHandler(e) {
+                if (e.data && typeof e.data === 'object' && e.data.type === 'ready') {
+                  console.log('[Memory] Player do Spotify pronto, enviando comando de play');
+                  spotifyIframe.contentWindow.postMessage({ command: 'play' }, '*');
+                  window.removeEventListener('message', spotifyMessageHandler);
+                }
+              });
+            } catch (error) {
+              console.error('[Memory] Erro ao inicializar player:', error);
             }
-          } catch (error) {
-            console.error('[Memory] Erro ao tentar iniciar player:', error);
           }
-        };
-        
-        // Primeira tentativa após um delay inicial
-        setTimeout(attemptToPlay, 1000);
-        
-        // Segunda tentativa após um delay maior, caso a primeira falhe
-        setTimeout(attemptToPlay, 3000);
+        }, 1000);
       }
     }
   }, [memoryData, loading]);
