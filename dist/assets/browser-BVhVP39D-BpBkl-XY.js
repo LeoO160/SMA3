@@ -1,0 +1,1 @@
+import{L as t}from"./index-CGOB2AHT.js";var e,r;function o(){return r||(r=1,e=function(){throw new Error("ws does not work in the browser. Browser clients must use the native WebSocket object")}),e}var n=o();const s=t(n),a=Object.freeze(Object.defineProperty({__proto__:null,default:s},Symbol.toStringTag,{value:"Module"}));export{a as b};
