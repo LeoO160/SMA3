@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Box, Container, Typography, Button, CircularProgress, IconButton } from '@mui/material';
+import { Box, Container, Typography, Button, CircularProgress, IconButton, Fade } from '@mui/material';
 import TitlePreview from '../components/TitlePreview';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import { getMemoryByUrl } from '../supabase/supabaseClient';
 import VisualEffects from '../components/VisualEffects';
 
@@ -13,7 +14,78 @@ export default function Memory() {
   const [error, setError] = useState(null);
   const [memoryData, setMemoryData] = useState(null);
   const [isPlaying, setIsPlaying] = useState(true);
+  const [showOverlay, setShowOverlay] = useState(true);
+  const spotifyIframeRef = useRef(null);
   
+  // Função para iniciar a reprodução após interação do usuário
+  const startPlayback = () => {
+    console.log('[Memory] Iniciando reprodução após interação do usuário');
+    setShowOverlay(false);
+    
+    try {
+      // Tenta iniciar a reprodução imediatamente após a interação do usuário
+      const iframe = document.getElementById('spotify-preview-iframe');
+      if (iframe && memoryData?.musicType === 1 && memoryData?.trackId) {
+        // Determina o tipo de conteúdo
+        let contentType = 'track';
+        if (memoryData.musicUrl) {
+          if (memoryData.musicUrl.includes('/playlist/')) contentType = 'playlist';
+          if (memoryData.musicUrl.includes('/album/')) contentType = 'album';
+        }
+        
+        // Recarrega o iframe com parâmetros otimizados e um timestamp para evitar cache
+        const newSrc = `https://open.spotify.com/embed/${contentType}/${memoryData.trackId}?utm_source=generator&theme=1&autoplay=1&init=1&loop=1&t=${Date.now()}`;
+        console.log('[Memory] Atualizando URL do iframe após interação:', newSrc);
+        iframe.src = newSrc;
+        
+        // Armazena a referência para usar em tentativas posteriores
+        spotifyIframeRef.current = iframe;
+        
+        // Programa múltiplas tentativas de reprodução em diferentes momentos
+        setTimeout(() => {
+          try {
+            console.log('[Memory] Tentativa 1 de reprodução');
+            if (spotifyIframeRef.current) {
+              spotifyIframeRef.current.contentWindow.postMessage({ command: 'play' }, '*');
+            }
+          } catch (e) {
+            console.log('[Memory] Erro na tentativa 1:', e);
+          }
+        }, 500);
+        
+        setTimeout(() => {
+          try {
+            console.log('[Memory] Tentativa 2 de reprodução');
+            if (spotifyIframeRef.current) {
+              spotifyIframeRef.current.contentWindow.postMessage({ command: 'play' }, '*');
+            }
+          } catch (e) {
+            console.log('[Memory] Erro na tentativa 2:', e);
+          }
+        }, 1500);
+        
+        // Uma tentativa final após um tempo mais longo
+        setTimeout(() => {
+          try {
+            console.log('[Memory] Tentativa final de reprodução');
+            if (spotifyIframeRef.current) {
+              // Recarrega o iframe uma última vez com novos parâmetros
+              spotifyIframeRef.current.src = `https://open.spotify.com/embed/${contentType}/${memoryData.trackId}?utm_source=generator&theme=1&autoplay=1&init=1&loop=1&t=${Date.now()}-final`;
+              // Tenta enviar o comando novamente após um breve atraso
+              setTimeout(() => {
+                spotifyIframeRef.current.contentWindow.postMessage({ command: 'play' }, '*');
+              }, 300);
+            }
+          } catch (e) {
+            console.log('[Memory] Erro na tentativa final:', e);
+          }
+        }, 3000);
+      }
+    } catch (error) {
+      console.error('[Memory] Erro ao iniciar reprodução:', error);
+    }
+  };
+
   // Efeito para carregar os dados da memória
   useEffect(() => {
     const fetchMemory = async () => {
@@ -40,134 +112,26 @@ export default function Memory() {
     fetchMemory();
   }, [urlPath]);
   
-  // Novo useEffect para garantir reprodução automática e contornar bloqueios de navegador
+  // Efeito para monitorar eventos de interação com a página
   useEffect(() => {
-    if (memoryData && !loading) {
-      console.log('[Memory] Garantindo reprodução automática com força máxima');
+    if (!loading && memoryData?.musicType === 1 && showOverlay) {
+      const handleUserInteraction = (e) => {
+        // Se o clique foi dentro do botão de play no overlay ou qualquer lugar na página
+        startPlayback();
+      };
       
-      // Força isPlaying como true
-      setIsPlaying(true);
+      // Adiciona handlers para eventos de interação comuns
+      window.addEventListener('click', handleUserInteraction, { once: true });
+      window.addEventListener('touchstart', handleUserInteraction, { once: true });
+      window.addEventListener('keydown', handleUserInteraction, { once: true });
       
-      // Função para criar e executar um hack de autoplay
-      function createAutoplayHack() {
-        console.log('[Memory] Criando hack de autoplay');
-        
-        // Cria um áudio silencioso para desbloquear o autoplay
-        const silentAudio = document.createElement('audio');
-        silentAudio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
-        silentAudio.volume = 0.001; // Praticamente inaudível
-        document.body.appendChild(silentAudio);
-        
-        // Tenta reproduzir o áudio silencioso
-        silentAudio.play().then(() => {
-          console.log('[Memory] Áudio desbloqueado, tentando player');
-          forcePlaySpotify();
-        }).catch(() => {
-          console.log('[Memory] Falha no desbloqueio de áudio');
-        });
-        
-        // Simulador de toque/clique - cria um evento sintético
-        const touchSimulator = document.createElement('div');
-        touchSimulator.style.position = 'fixed';
-        touchSimulator.style.top = '0';
-        touchSimulator.style.left = '0';
-        touchSimulator.style.width = '100%';
-        touchSimulator.style.height = '100%';
-        touchSimulator.style.zIndex = '9999';
-        touchSimulator.style.opacity = '0';
-        touchSimulator.style.pointerEvents = 'none';
-        document.body.appendChild(touchSimulator);
-        
-        // Função para simular clique do usuário
-        function simulateClick() {
-          // Cria e dispara um evento de mouse
-          const clickEvent = new MouseEvent('click', {
-            view: window,
-            bubbles: true,
-            cancelable: true
-          });
-          touchSimulator.dispatchEvent(clickEvent);
-          
-          // Tenta iniciar a reprodução após o "clique"
-          silentAudio.play().catch(() => {});
-          forcePlaySpotify();
-        }
-        
-        // Simulação de interação do usuário
-        setTimeout(simulateClick, 500);
-        setTimeout(simulateClick, 2000);
-        setTimeout(simulateClick, 5000);
-        
-        // Também tenta via eventos reais
-        ['click', 'touchstart', 'scroll', 'keydown'].forEach(event => {
-          document.addEventListener(event, () => {
-            silentAudio.play().catch(() => {});
-            forcePlaySpotify();
-          }, { once: true });
-        });
-        
-        // Limpa elementos após uso
-        return () => {
-          if (document.body.contains(silentAudio)) document.body.removeChild(silentAudio);
-          if (document.body.contains(touchSimulator)) document.body.removeChild(touchSimulator);
-        };
-      }
-      
-      // Força a reprodução do Spotify de várias maneiras
-      function forcePlaySpotify() {
-        if (memoryData.musicType === 1 && memoryData.trackId) {
-          const spotifyIframe = document.getElementById('spotify-preview-iframe');
-          if (spotifyIframe) {
-            try {
-              // Determina o tipo de conteúdo Spotify
-              let contentType = 'track';
-              if (memoryData.musicUrl) {
-                if (memoryData.musicUrl.includes('/playlist/')) contentType = 'playlist';
-                if (memoryData.musicUrl.includes('/album/')) contentType = 'album';
-              }
-              
-              // 1. Atualiza URL com parâmetros de força máxima e timestamp
-              const newSrc = `https://open.spotify.com/embed/${contentType}/${memoryData.trackId}?utm_source=generator&theme=1&autoplay=1&init=1&loop=1&t=${new Date().getTime()}`;
-              console.log('[Memory] Atualizando iframe com URL de força máxima:', newSrc);
-              spotifyIframe.src = newSrc;
-              
-              // 2. Mensagem direta para o iframe
-              setTimeout(() => {
-                try {
-                  spotifyIframe.contentWindow.postMessage({ command: 'play' }, '*');
-                } catch (e) {
-                  console.log('[Memory] Erro ao enviar comando via postMessage:', e);
-                }
-              }, 800);
-              
-              // 3. Manipulação direta via JavaScript (hack)
-              setTimeout(() => {
-                try {
-                  // Tenta acessar o botão de play dentro do iframe
-                  const iframeDoc = spotifyIframe.contentDocument || spotifyIframe.contentWindow.document;
-                  const playButton = iframeDoc.querySelector('[data-testid="play-button"], button.control-button--circled');
-                  if (playButton) {
-                    console.log('[Memory] Botão de play encontrado, clicando');
-                    playButton.click();
-                  }
-                } catch (e) {
-                  console.log('[Memory] Erro ao tentar acessar conteúdo do iframe:', e);
-                }
-              }, 2000);
-            } catch (error) {
-              console.error('[Memory] Erro ao tentar reproduzir Spotify:', error);
-            }
-          }
-        }
-      }
-      
-      // Inicia o hack
-      const cleanup = createAutoplayHack();
-      
-      // Retorna função de limpeza
-      return cleanup;
+      return () => {
+        window.removeEventListener('click', handleUserInteraction);
+        window.removeEventListener('touchstart', handleUserInteraction);
+        window.removeEventListener('keydown', handleUserInteraction);
+      };
     }
-  }, [memoryData, loading]);
+  }, [loading, memoryData, showOverlay]);
   
   const handleGoBack = () => {
     navigate('/');
@@ -220,13 +184,6 @@ export default function Memory() {
     const isGradient = typeof memoryData.webBgColor === 'string' && memoryData.webBgColor.includes('gradient');
     
     console.log('[Memory] Renderizando memória:', memoryData);
-    console.log('[Memory] Propriedades importantes:', {
-      title: memoryData.title,
-      url: memoryData.urlPath,
-      webBgColor: memoryData.webBgColor,
-      musicInfo: memoryData.musicInfo,
-      videoId: memoryData.videoId
-    });
     
     return (
       <Box
@@ -237,6 +194,7 @@ export default function Memory() {
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
+          position: 'relative',
           ...(isGradient
             ? { 
                 backgroundImage: memoryData.webBgColor,
@@ -249,6 +207,74 @@ export default function Memory() {
               })
         }}
       >
+        {/* Overlay para forçar interação do usuário */}
+        {showOverlay && memoryData.musicType === 1 && (
+          <Fade in={showOverlay}>
+            <Box
+              sx={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                zIndex: 9999,
+                padding: 3,
+                cursor: 'pointer',
+              }}
+              onClick={startPlayback}
+            >
+              <Box 
+                sx={{
+                  width: 80,
+                  height: 80,
+                  borderRadius: '50%',
+                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  marginBottom: 2,
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+                  transition: 'transform 0.2s',
+                  '&:hover': {
+                    transform: 'scale(1.1)',
+                  }
+                }}
+              >
+                <PlayArrowIcon sx={{ fontSize: 40, color: '#333' }} />
+              </Box>
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  color: 'white', 
+                  textAlign: 'center',
+                  maxWidth: 400,
+                  fontWeight: 'medium',
+                  textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)'
+                }}
+              >
+                Clique para iniciar a experiência com música
+              </Typography>
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  color: 'rgba(255,255,255,0.8)', 
+                  mt: 1, 
+                  textAlign: 'center',
+                  maxWidth: 450,
+                  textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)'
+                }}
+              >
+                O navegador exige uma interação do usuário para ativar a reprodução automática de áudio
+              </Typography>
+            </Box>
+          </Fade>
+        )}
+        
         {/* Botão para voltar */}
         <IconButton
           onClick={handleGoBack}
@@ -293,6 +319,7 @@ export default function Memory() {
             isMemoryPage={true}
             isPlaying={isPlaying}
             onPlayPause={() => setIsPlaying(!isPlaying)}
+            spotifyInteractionForced={!showOverlay}
           />
         </Box>
       </Box>

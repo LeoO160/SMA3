@@ -4,105 +4,47 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="./cabecalho.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Say Me Always</title>
-    
-    <!-- Script para desbloquear autoplay -->
-    <script>
-      // Tenta desbloquear políticas de autoplay com um áudio silencioso
-      window.addEventListener('DOMContentLoaded', function() {
-        // Cria um elemento de áudio silencioso
-        var silentAudio = document.createElement('audio');
-        silentAudio.setAttribute('src', 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
-        silentAudio.setAttribute('autoplay', 'true');
-        silentAudio.setAttribute('muted', 'true');
-        silentAudio.style.display = 'none';
-        document.body.appendChild(silentAudio);
-        
-        // Tenta desbloquear autoplay com interação simulada
-        function attemptAutoplay() {
-          // Reproduz o áudio silencioso para desbloquear o autoplay
-          silentAudio.play().catch(function() {
-            console.log('Tentativa de desbloquear autoplay falhou, aguardando interação do usuário');
-          });
-          
-          // Lista todos os iframes para enviar comando de reprodução
-          setTimeout(function() {
-            var iframes = document.querySelectorAll('iframe');
-            iframes.forEach(function(iframe) {
-              if (iframe.src.includes('spotify')) {
-                console.log('Enviando comando de play para iframe do Spotify');
-                try {
-                  // Atualiza o src para forçar autoplay
-                  if (!iframe.src.includes('autoplay=1')) {
-                    var updatedSrc = iframe.src + (iframe.src.includes('?') ? '&' : '?') + 'autoplay=1&init=1&t=' + Date.now();
-                    iframe.src = updatedSrc;
-                  }
-                  // Envia mensagem
-                  setTimeout(function() {
-                    try {
-                      iframe.contentWindow.postMessage({ command: 'play' }, '*');
-                    } catch(e) {
-                      console.error('Erro ao enviar mensagem:', e);
-                    }
-                  }, 1000);
-                } catch(e) {
-                  console.error('Erro ao tentar manipular iframe:', e);
-                }
-              }
-            });
-          }, 1500);
-        }
-        
-        // Tenta primeira vez
-        attemptAutoplay();
-        
-        // Tenta novamente após 3 segundos
-        setTimeout(attemptAutoplay, 3000);
-        
-        // Captura todas as interações do usuário
-        ['click', 'touchstart', 'keydown', 'scroll', 'mousemove'].forEach(function(event) {
-          document.addEventListener(event, function() {
-            attemptAutoplay();
-          }, {once: true});
-        });
-      });
-    </script>
 
-    <script type="module" crossorigin src="./assets/index-CEoxDQxL.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-Cv8b76Vr.css">
+
+    <script type="module" crossorigin src="./assets/index-DZ3nzjC1.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-W5ZfPsvc.css">
   </head>
   <body>
     <div id="root"></div>
-    <!-- Script auxiliar para garantir autoplay -->
     <script>
-      // Executa após o carregamento completo
+      // Script para tentar habilitar autoplay em dispositivos móveis
       window.addEventListener('load', function() {
-        setTimeout(function() {
-          // Simula interação do usuário após um tempo
-          var event = new MouseEvent('click', {
-            view: window,
-            bubbles: true,
-            cancelable: true
+        // Criar um contexto de áudio falso para "desbloquear" o áudio no iOS
+        var context = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Função para ativar autoplay
+        function enableAutoplay() {
+          // Tentar iniciar o contexto de áudio ao primeiro evento de interação
+          context.resume().then(function() {
+            console.log('Contexto de áudio iniciado');
           });
-          document.body.dispatchEvent(event);
           
-          // Tenta reproduzir todos os iframes de Spotify
-          document.querySelectorAll('iframe').forEach(function(iframe) {
-            if (iframe.src.includes('spotify')) {
-              // Força parâmetros de autoplay
-              if (!iframe.src.includes('autoplay=1')) {
-                iframe.src = iframe.src + (iframe.src.includes('?') ? '&' : '?') + 'autoplay=1&init=1&t=' + Date.now();
-              }
-              
-              // Envia comando direto
-              setTimeout(function() {
-                try {
-                  iframe.contentWindow.postMessage({ command: 'play' }, '*');
-                } catch(e) {}
-              }, 500);
+          // Encontrar iframes de Spotify e tentar enviar comando de play
+          setTimeout(function() {
+            try {
+              var spotifyIframes = document.querySelectorAll('iframe[id="spotify-preview-iframe"]');
+              spotifyIframes.forEach(function(iframe) {
+                iframe.contentWindow.postMessage({ command: 'play' }, '*');
+              });
+            } catch(e) {
+              console.log('Erro ao tentar reproduzir Spotify:', e);
             }
-          });
-        }, 1000);
+          }, 500);
+        }
+        
+        // Registrar eventos para capturar interação
+        ['touchstart', 'touchend', 'click', 'keydown'].forEach(function(event) {
+          document.addEventListener(event, enableAutoplay, { once: true });
+        });
       });
     </script>
   </body>
